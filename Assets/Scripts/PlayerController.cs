@@ -13,6 +13,9 @@ public class PlayerController : MonoBehaviour
     private int pathIndex = 0;
     public EnemyAI enemyAI;
 
+    public Animator animator; 
+    public Transform modelTransform; // player model
+    public float rotationSpeed = 10f; // rotation speed of the model
     void Update()
     {
         if (isMoving)
@@ -56,25 +59,40 @@ public class PlayerController : MonoBehaviour
         int y = Mathf.RoundToInt(playerPos.z / gridGenerator.cellSize);
         return new Vector2Int(x, y);
     }
-
     IEnumerator MoveAlongPath()
     {
         isMoving = true;
+        animator.SetBool("isWalking", true); // start walking animation
 
         while (pathIndex < currentPath.Count)
         {
             Vector3 targetPos = gridGenerator.GetTileAtPosition(currentPath[pathIndex].x, currentPath[pathIndex].y).worldPosition;
             targetPos.y = transform.position.y; // keep player height
 
+            // Calculate direction to target
+            Vector3 direction = (targetPos - transform.position).normalized;
+
             while (Vector3.Distance(transform.position, targetPos) > 0.01f)
             {
+                // Move the parent (player) towards target
                 transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
+
+                // Rotate the model smoothly towards movement direction
+                if (direction != Vector3.zero)
+                {
+                    Quaternion targetRotation = Quaternion.LookRotation(direction);
+                    modelTransform.rotation = Quaternion.Slerp(modelTransform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                }
+
                 yield return null;
             }
 
             pathIndex++;
         }
 
+        animator.SetBool("isWalking", false); // stop walking animation
+
+        modelTransform.rotation = Quaternion.Euler(0f, 225f, 0f); // set idle rotation of the model (225 degrees) to face the camera
         isMoving = false;
         currentPath = null;
 
@@ -83,6 +101,6 @@ public class PlayerController : MonoBehaviour
             Debug.Log("Notifying enemy AI of player movement");
             enemyAI.OnPlayerMoved();
         }
-
     }
 }
+
