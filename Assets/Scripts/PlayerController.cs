@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
     private bool isMoving = false;
     private List<Vector2Int> currentPath = null;
     private int pathIndex = 0;
+    public EnemyAI enemyAI;
 
     void Update()
     {
@@ -76,5 +77,12 @@ public class PlayerController : MonoBehaviour
 
         isMoving = false;
         currentPath = null;
+
+        if (enemyAI != null)
+        {
+            Debug.Log("Notifying enemy AI of player movement");
+            enemyAI.OnPlayerMoved();
+        }
+
     }
 }
