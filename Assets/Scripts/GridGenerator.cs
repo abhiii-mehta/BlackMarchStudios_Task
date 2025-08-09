@@ -1,32 +1,38 @@
 using UnityEngine;
+
 public class GridGenerator : MonoBehaviour
 {
     [Header("Grid Settings")]
-    public int width = 10; //width of the grid
-    public int height = 10; //height of the grid
+    public int width = 10; // width of the grid
+    public int height = 10; // height of the grid
     public float cellSize = 1.0f; // distance between tile centers
     public Material tileMaterial; // material to assign to each tile
-    private GameObject _gridParent; // to keep the hierarchy clean
+
+    private GameObject _gridParent; // keeps hierarchy clean
+    private Tile[,] tilesArray; // store references to all tiles
 
     void Start()
     {
-        GenerateGrid(); // generates the grid
+        GenerateGrid();
     }
+
     public void GenerateGrid()
     {
-        _gridParent = new GameObject("Grid"); // creates a parent object to keep the hierrarchy clean
+        _gridParent = new GameObject("Grid");
 
-        for (int x = 0; x < width; x++) // loops through to spawn the grid
+        tilesArray = new Tile[width, height]; // create array to store all tiles
+
+        for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                GameObject cubetiles = GameObject.CreatePrimitive(PrimitiveType.Cube); // creates a cube which has MeshRenderer and Collider by default
+                GameObject cubetiles = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
                 cubetiles.transform.SetParent(_gridParent.transform);
-                cubetiles.transform.position = new Vector3(x * cellSize, 0f, y * cellSize); // sets the position
-                cubetiles.name = $"Tile_{x}_{y}"; // sets the name
+                cubetiles.transform.position = new Vector3(x * cellSize, 0f, y * cellSize);
+                cubetiles.name = $"Tile_{x}_{y}";
 
-                if (tileMaterial != null) // if a material is assigned
+                if (tileMaterial != null)
                 {
                     var rend = cubetiles.GetComponent<Renderer>();
                     if (rend != null)
@@ -35,9 +41,19 @@ public class GridGenerator : MonoBehaviour
                     }
                 }
 
-                Tile tile = cubetiles.AddComponent<Tile>(); // adds the Tile component
+                Tile tile = cubetiles.AddComponent<Tile>(); // add the Tile script to the cube
                 tile.gridPos = new Vector2Int(x, y);
+                tilesArray[x, y] = tile; // store the tile in the array
             }
         }
+    }
+
+    public Tile GetTileAtPosition(int x, int y) // gets a tile by grid coordinates
+    {
+        if (x >= 0 && x < width && y >= 0 && y < height)
+        {
+            return tilesArray[x, y];
+        }
+        return null; // if its out of range
     }
 }
