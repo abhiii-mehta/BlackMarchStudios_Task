@@ -4,7 +4,7 @@ public class ObstacleManager : MonoBehaviour
 {
     public ObstacleData obstacleData;     // assign in Inspector
     public GameObject obstaclePrefab;     // a red sphere prefab (or null to create primitive)
-    public float heightOffset = 0.5f;     // how high above the tile the sphere should be
+    public float heightOffset = 1f;     // how high above the tile the sphere should be
     public GridGenerator gridGenerator;   // assign in Inspector so we can find tiles
 
     IEnumerator Start()

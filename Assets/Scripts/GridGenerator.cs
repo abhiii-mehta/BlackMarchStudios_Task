@@ -31,6 +31,7 @@ public class GridGenerator : MonoBehaviour
                 cubetiles.transform.SetParent(_gridParent.transform);
                 cubetiles.transform.position = new Vector3(x * cellSize, 0f, y * cellSize);
                 cubetiles.name = $"Tile_{x}_{y}";
+                cubetiles.layer = LayerMask.NameToLayer("Tile");
 
                 if (tileMaterial != null)
                 {
@@ -56,4 +57,9 @@ public class GridGenerator : MonoBehaviour
         }
         return null; // if its out of range
     }
+    public Tile[,] GetTilesArray()
+    {
+        return tilesArray;
+    }
+
 }
