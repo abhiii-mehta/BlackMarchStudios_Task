@@ -16,10 +16,16 @@ public class PlayerController : MonoBehaviour
     public Animator animator; 
     public Transform modelTransform; // player model
     public float rotationSpeed = 10f; // rotation speed of the model
+    public TurnManager turnManager;
+    public void SetTurnManager(TurnManager tm)
+    {
+        turnManager = tm;
+    }
+
     void Update()
     {
-        if (isMoving)
-            return; // disable input while moving
+        if (!turnManager.IsPlayerTurn() || isMoving)
+            return;
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -53,7 +59,7 @@ public class PlayerController : MonoBehaviour
 
     Vector2Int GetPlayerGridPosition()
     {
-        // Find closest tile to current player position
+        // Finds the closest tile to current player position
         Vector3 playerPos = transform.position;
         int x = Mathf.RoundToInt(playerPos.x / gridGenerator.cellSize);
         int y = Mathf.RoundToInt(playerPos.z / gridGenerator.cellSize);
@@ -62,45 +68,36 @@ public class PlayerController : MonoBehaviour
     IEnumerator MoveAlongPath()
     {
         isMoving = true;
-        animator.SetBool("isWalking", true); // start walking animation
+        animator.SetBool("isWalking", true);
 
         while (pathIndex < currentPath.Count)
         {
-            Vector3 targetPos = gridGenerator.GetTileAtPosition(currentPath[pathIndex].x, currentPath[pathIndex].y).worldPosition;
-            targetPos.y = transform.position.y; // keep player height
+            Vector3 targetPos = gridGenerator.GetTileAtPosition(currentPath[pathIndex].x, currentPath[pathIndex].y).worldPosition; // gets the world position of the target tile
+            targetPos.y = transform.position.y;
 
-            // Calculate direction to target
             Vector3 direction = (targetPos - transform.position).normalized;
-
+             
             while (Vector3.Distance(transform.position, targetPos) > 0.01f)
             {
-                // Move the parent (player) towards target
-                transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
+                transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime); // move to the target position
 
-                // Rotate the model smoothly towards movement direction
                 if (direction != Vector3.zero)
                 {
                     Quaternion targetRotation = Quaternion.LookRotation(direction);
-                    modelTransform.rotation = Quaternion.Slerp(modelTransform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                    modelTransform.rotation = Quaternion.Slerp(modelTransform.rotation, targetRotation, rotationSpeed * Time.deltaTime); // rotate the model
                 }
-
                 yield return null;
             }
-
             pathIndex++;
         }
 
-        animator.SetBool("isWalking", false); // stop walking animation
-
-        modelTransform.rotation = Quaternion.Euler(0f, 225f, 0f); // set idle rotation of the model (225 degrees) to face the camera
+        animator.SetBool("isWalking", false);
+        modelTransform.rotation = Quaternion.Euler(0f, 225f, 0f);
         isMoving = false;
         currentPath = null;
 
-        if (enemyAI != null)
-        {
-            Debug.Log("Notifying enemy AI of player movement");
-            enemyAI.OnPlayerMoved();
-        }
+        turnManager.EndPlayerTurn();
     }
+
 }
 

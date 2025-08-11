@@ -9,40 +9,42 @@ public class EnemyAI : MonoBehaviour, IAI
     public float moveSpeed = 3f;
 
     private bool isMoving = false;
-    private List<Vector2Int> currentPath; // list of grid positions
+    private List<Vector2Int> currentPath; // path to the player
     private int pathIndex = 0;
 
-    private bool playerHasMoved = true; // enemy moves once at start
+    private TurnManager turnManager;
 
-    void Update()
+    public void SetTurnManager(TurnManager tm)
     {
-        if (!isMoving && playerHasMoved) // checks if the enemy is not moving and the player has moved
-        {
-            TakeTurn();
-            playerHasMoved = false; // reset the flag until next notification
-        }
+        turnManager = tm;
     }
-
     public void TakeTurn()
     {
-        Vector2Int enemyGridPos = WorldPosToGrid(transform.position); // grid position of the enemy
-        Vector2Int playerGridPos = WorldPosToGrid(playerTransform.position); // grid position of the player
+        if (isMoving) return; // safety check
 
-        List<Vector2Int> adjacentTiles = GetAdjacentFreeTiles(playerGridPos); // find adjacent free tiles
+        Vector2Int enemyGridPos = WorldPosToGrid(transform.position);
+        Vector2Int playerGridPos = WorldPosToGrid(playerTransform.position);
+
+        Tile[,] tiles = gridGenerator.GetTilesArray(); // tiles[x, y]
+
+        tiles[playerGridPos.x, playerGridPos.y].isBlocked = true; // player position is blocked 
+        tiles[enemyGridPos.x, enemyGridPos.y].isBlocked = true; // enemy position is blocked
+
+        List<Vector2Int> adjacentTiles = GetAdjacentFreeTiles(playerGridPos); // adjacentTiles[x, y] 
 
         if (adjacentTiles.Count == 0)
         {
-            return; // no need to move
+            EndTurn();
+            return;
         }
 
-        // Find shortest path to any adjacent tile
+        // Pick the shortest path to an adjacent tile
         currentPath = null;
         int shortestLength = int.MaxValue;
 
         foreach (var adj in adjacentTiles)
         {
-            List<Vector2Int> path = Pathfinding.FindPath(gridGenerator.GetTilesArray(), enemyGridPos, adj);
-
+            List<Vector2Int> path = Pathfinding.FindPath(tiles, enemyGridPos, adj);
             if (path != null && path.Count < shortestLength)
             {
                 shortestLength = path.Count;
@@ -50,39 +52,46 @@ public class EnemyAI : MonoBehaviour, IAI
             }
         }
 
+        // If we have a path, start moving
         if (currentPath != null && currentPath.Count > 1)
         {
-            pathIndex = 1; // start moving from next step
+            pathIndex = 1; // index 0 is the current position
             StartCoroutine(MoveAlongPath());
         }
-        if (currentPath != null)
-            Debug.Log($"Found path of length {currentPath.Count}");
         else
-            Debug.Log("No valid path found.");
+        {
+            EndTurn();
+        }
     }
 
-    IEnumerator MoveAlongPath()
+    private IEnumerator MoveAlongPath()
     {
         isMoving = true;
-        Debug.Log("Enemy started moving along path.");
 
         while (pathIndex < currentPath.Count)
         {
-            Vector3 targetPos = gridGenerator.GetTileAtPosition(currentPath[pathIndex].x, currentPath[pathIndex].y).worldPosition; // get target position
-            targetPos.y = transform.position.y; // keep current y position
+            Vector3 targetPos = gridGenerator.GetTileAtPosition(currentPath[pathIndex].x, currentPath[pathIndex].y).worldPosition;
+            targetPos.y = transform.position.y;
 
             while (Vector3.Distance(transform.position, targetPos) > 0.01f)
             {
-                transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime); // move towards target
+                transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
                 yield return null;
             }
+
             pathIndex++;
         }
+
         isMoving = false;
-        Debug.Log("Enemy finished moving.");
+        EndTurn();
     }
 
-    List<Vector2Int> GetAdjacentFreeTiles(Vector2Int pos) // returns list of adjacent free tiles
+    private void EndTurn()
+    {
+        turnManager.EndEnemyTurn();
+    }
+
+    private List<Vector2Int> GetAdjacentFreeTiles(Vector2Int pos)
     {
         List<Vector2Int> freeTiles = new List<Vector2Int>();
         Vector2Int[] directions = new Vector2Int[]
@@ -96,9 +105,9 @@ public class EnemyAI : MonoBehaviour, IAI
         foreach (var dir in directions)
         {
             Vector2Int checkPos = pos + dir;
-            Tile tile = gridGenerator.GetTileAtPosition(checkPos.x, checkPos.y); // get tile at position
+            Tile tile = gridGenerator.GetTileAtPosition(checkPos.x, checkPos.y);
 
-            if (tile != null && !tile.isBlocked) // if tile exists and is not blocked
+            if (tile != null && !tile.isBlocked)
             {
                 freeTiles.Add(checkPos);
             }
@@ -106,14 +115,10 @@ public class EnemyAI : MonoBehaviour, IAI
         return freeTiles;
     }
 
-    Vector2Int WorldPosToGrid(Vector3 worldPos) // converts world position to grid position
+    private Vector2Int WorldPosToGrid(Vector3 worldPos)
     {
         int x = Mathf.RoundToInt(worldPos.x / gridGenerator.cellSize);
         int y = Mathf.RoundToInt(worldPos.z / gridGenerator.cellSize);
         return new Vector2Int(x, y);
-    }
-    public void OnPlayerMoved()
-    {
-        playerHasMoved = true; // player has moved
     }
 }
