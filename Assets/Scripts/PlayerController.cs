@@ -32,13 +32,19 @@ public class PlayerController : MonoBehaviour
             TryMoveToClickedTile();
         }
     }
-
-    void TryMoveToClickedTile() // trying to move to the clicked tile
+    private Vector2Int WorldPosToGrid(Vector3 worldPos)
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition); 
+        int x = Mathf.RoundToInt(worldPos.x / gridGenerator.cellSize);
+        int y = Mathf.RoundToInt(worldPos.z / gridGenerator.cellSize);
+        return new Vector2Int(x, y);
+    }
+
+    void TryMoveToClickedTile()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit, 100f, tileLayer)) // check for the raycast hit 
+        if (Physics.Raycast(ray, out hit, 100f, tileLayer)) // checks for the raycast hit 
         {
             Tile clickedTile = hit.collider.GetComponent<Tile>();
 
@@ -46,7 +52,13 @@ public class PlayerController : MonoBehaviour
             {
                 Vector2Int playerGridPos = GetPlayerGridPosition();
                 Vector2Int targetGridPos = clickedTile.gridPos;
-                currentPath = Pathfinding.FindPath(gridGenerator.GetTilesArray(), playerGridPos, targetGridPos); // find path
+
+                Tile[,] tiles = gridGenerator.GetTilesArray(); // tiles[x, y]
+
+                Vector2Int enemyGridPos = WorldPosToGrid(enemyAI.transform.position); // gets the grid position of the enemy
+                tiles[enemyGridPos.x, enemyGridPos.y].isBlocked = true;
+
+                currentPath = Pathfinding.FindPath(tiles, playerGridPos, targetGridPos); // finds the path from player to clicked tile
 
                 if (currentPath != null && currentPath.Count > 1) // if path found
                 {
